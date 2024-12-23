@@ -1,4 +1,4 @@
-module toki.io/toki
+module github.com/zakirkun/toki
 
 go 1.23.1
 
