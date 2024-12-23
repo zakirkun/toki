@@ -12,12 +12,12 @@ Toki is a fast and efficient SQL query builder for Go that helps you build SQL s
 - 🚀 High-performance query building
 - 🔒 Automatic placeholder conversion (? to $1, $2, ...)
 - 💾 Memory pooling for better performance
-- 📦 Transaction support
-- 🎯 Dynamic query construction
-- 🛡️ SQL injection prevention
+- 📦 Transaction support with automatic rollback
+- 🎯 Fluent interface for query construction
+- 🛡️ Secure parameter binding and SQL injection prevention
 - 📊 Structure binding support
 - ⚡ Memory efficient operations
-- 🔍 Expression support
+- 🔍 Expression and Raw query support
 
 ## Installation
 
@@ -73,6 +73,7 @@ func main() {
 
 ### Query Building
 
+### SELECT Queries
 ```go
 // SELECT query
 builder.
@@ -81,12 +82,16 @@ builder.
     Where("age > ?", 18).
     AndWhere("status = ?", "active").
     OrderBy("created_at DESC")
-
+```
+### INSERT Queries
+```go
 // INSERT query
 builder.
     Insert("users", "name", "email").
     Values("John Doe", "john@example.com")
-
+```
+### Update Queries
+```go
 // UPDATE query
 builder.
     Update("users").
@@ -95,11 +100,22 @@ builder.
         "updated_at": "NOW()",
     }).
     Where("id = ?", 1)
-
+```
+### Delete Queries
+```go
 // DELETE query
 builder.
     Delete("users").
     Where("status = ?", "inactive")
+```
+### Raw Queries
+```go
+builder.Raw(`
+    SELECT u.*, p.name as profile_name 
+    FROM users u 
+    LEFT JOIN profiles p ON p.user_id = u.id 
+    WHERE u.created_at > $1
+`, time.Now().AddDate(0, -1, 0))
 ```
 
 ### Transaction Support
@@ -187,6 +203,41 @@ query := builder.
 // Automatically converts to $1, $2, etc. for PostgreSQL
 // SELECT * FROM users WHERE age > $1 AND status = $2
 ```
+## Best Practices
+
+1. **Use Transactions for Multiple Operations**
+   ```go
+   tx, _ := toki.Begin(db)
+   defer tx.Rollback()
+   // ... perform operations
+   tx.Commit()
+   ```
+
+2. **Always Close Rows**
+   ```go
+   rows, err := stmt.Query()
+   if err != nil {
+       return err
+   }
+   defer rows.Close()
+   ```
+
+3. **Use Parameter Binding**
+   ```go
+   // Good
+   Where("id = ?", id)
+
+   // Bad
+   Where(fmt.Sprintf("id = %d", id))
+   ```
+
+4. **Utilize Structure Binding**
+   ```go
+   type User struct {
+       ID   int    `db:"id"`
+       Name string `db:"name"`
+   }
+   ```
 
 ## License
 
@@ -199,4 +250,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Support
 
 If you have any questions or need help, please open an issue in the GitHub repository.
-
