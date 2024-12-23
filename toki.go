@@ -121,6 +121,25 @@ func (b *Builder) Values(values ...interface{}) *Builder {
 	return b
 }
 
+// Delete initializes a DELETE query
+func (b *Builder) Delete(table string) *Builder {
+	b.parts = append(b.parts, fmt.Sprintf("DELETE FROM %s", table))
+	return b
+}
+
+// DeleteFrom is an alias for Delete for more expressive API
+func (b *Builder) DeleteFrom(table string) *Builder {
+	return b.Delete(table)
+}
+
+// Returning adds a RETURNING clause to the DELETE statement
+func (b *Builder) Returning(columns ...string) *Builder {
+	if len(columns) > 0 {
+		b.parts = append(b.parts, "RETURNING", strings.Join(columns, ", "))
+	}
+	return b
+}
+
 // String builds the final query string
 func (b *Builder) String() string {
 	sb := b.pool.Get().(*strings.Builder)
