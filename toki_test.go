@@ -65,6 +65,56 @@ func TestSelect(t *testing.T) {
 			expected: "SELECT * FROM users WHERE age > $1 AND status = $2 ORDER BY created_at DESC",
 			args:     []interface{}{18, "active"},
 		},
+		{
+			name: "Complex Join Query",
+			build: func(b *Builder) *Builder {
+				return b.
+					Select("u.id", "u.name", "p.title", "c.name as category").
+					From("users u").
+					InnerJoin("posts p", "p.user_id = u.id").
+					LeftJoin("categories c", "c.id = p.category_id").
+					Where("u.status = ?", "active").
+					AndWhere("p.published = ?", true).
+					GroupBy("u.id").
+					Having("COUNT(p.id) > ?", 5)
+			},
+			expected: "SELECT u.id, u.name, p.title, c.name as category FROM users u " +
+				"INNER JOIN posts p ON p.user_id = u.id " +
+				"LEFT JOIN categories c ON c.id = p.category_id " +
+				"WHERE u.status = ? AND p.published = ? " +
+				"GROUP BY u.id HAVING COUNT(p.id) > ?",
+			args: []interface{}{"active", true, 5},
+		},
+		{
+			name: "Union Query",
+			build: func(b *Builder) *Builder {
+				return b.
+					Select("name", "email", "'customer' as type").
+					From("customers").
+					Union("SELECT name, email, 'subscriber' as type FROM subscribers").
+					OrderBy("name ASC")
+			},
+			expected: "SELECT name, email, 'customer' as type FROM customers " +
+				"UNION SELECT name, email, 'subscriber' as type FROM subscribers " +
+				"ORDER BY name ASC",
+			args: []interface{}{},
+		},
+		{
+			name: "Complex Where Conditions",
+			build: func(b *Builder) *Builder {
+				return b.
+					Select("*").
+					From("products").
+					Where("price > ?", 100).
+					OrWhere("category = ?", "premium").
+					WhereIn("status", "active", "featured").
+					Having("total_sales > ?", 1000)
+			},
+			expected: "SELECT * FROM products " +
+				"WHERE price > ? OR category = ? AND status IN (?, ?) " +
+				"HAVING total_sales > ?",
+			args: []interface{}{100, "premium", "active", "featured", 1000},
+		},
 	}
 
 	runBuilderTests(t, tests)

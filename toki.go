@@ -28,6 +28,28 @@ func New() *Builder {
 	}
 }
 
+// Join adds a JOIN clause
+func (b *Builder) Join(joinType JoinType, table, condition string, args ...interface{}) *Builder {
+	b.parts = append(b.parts, fmt.Sprintf("%s %s ON %s", string(joinType), table, b.convertPlaceholders(condition)))
+	b.args = append(b.args, args...)
+	return b
+}
+
+// InnerJoin adds an INNER JOIN
+func (b *Builder) InnerJoin(table string, condition string, args ...interface{}) *Builder {
+	return b.Join(INNER_JOIN, table, condition, args...)
+}
+
+// LeftJoin adds a LEFT JOIN
+func (b *Builder) LeftJoin(table string, condition string, args ...interface{}) *Builder {
+	return b.Join(LEFT_JOIN, table, condition, args...)
+}
+
+// RightJoin adds a RIGHT JOIN
+func (b *Builder) RightJoin(table string, condition string, args ...interface{}) *Builder {
+	return b.Join(RIGHT_JOIN, table, condition, args...)
+}
+
 // WithTransaction sets the transaction for the builder
 func (b *Builder) WithTransaction(tx *Transaction) *Builder {
 	b.tx = tx
@@ -61,6 +83,43 @@ func (b *Builder) Where(condition string, args ...interface{}) *Builder {
 func (b *Builder) AndWhere(condition string, args ...interface{}) *Builder {
 	b.parts = append(b.parts, "AND", b.convertPlaceholders(condition))
 	b.args = append(b.args, args...)
+	return b
+}
+
+// WhereIn adds a WHERE IN condition
+func (b *Builder) WhereIn(column string, values ...interface{}) *Builder {
+	placeholders := make([]string, len(values))
+	for i := range values {
+		placeholders[i] = "?"
+	}
+	condition := fmt.Sprintf("%s IN (%s)", column, strings.Join(placeholders, ", "))
+	return b.Where(condition, values...)
+}
+
+// Having adds a HAVING condition
+func (b *Builder) Having(condition string, args ...interface{}) *Builder {
+	b.parts = append(b.parts, "HAVING", b.convertPlaceholders(condition))
+	b.args = append(b.args, args...)
+	return b
+}
+
+// Union adds a UNION clause
+func (b *Builder) Union(query string, arg ...interface{}) *Builder {
+	b.parts = append(b.parts, "UNION", query)
+	b.args = append(b.args, arg...)
+	return b
+}
+
+// UnionAll adds a UNION ALL clause
+func (b *Builder) UnionAll(query string, arg ...interface{}) *Builder {
+	b.parts = append(b.parts, "UNION ALL", query)
+	b.args = append(b.args, arg...)
+	return b
+}
+
+// GroupBy adds a GROUP BY clause
+func (b *Builder) GroupBy(columns ...string) *Builder {
+	b.parts = append(b.parts, fmt.Sprintf("GROUP BY %s", strings.Join(columns, ", ")))
 	return b
 }
 
